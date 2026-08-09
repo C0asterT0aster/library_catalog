@@ -3,7 +3,7 @@
 from homeassistant import ConfigEntries, Core
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN
-from .coordinator import LibraryDataUpdateCoordinator
+from .coordinator import LibraryCatalogCoordinator
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Library Catalog integration."""
@@ -12,7 +12,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntries) -> bool:
     """Set up Library Catalog from a config entry."""
-    coordinator = LibraryDataUpdateCoordinator(hass)
+    coordinator = LibraryCatalogCoordinator(hass, entry)
     await coordinator.async_refresh()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator

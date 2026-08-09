@@ -5,7 +5,7 @@ from typing import Any
 import asyncio
 import logging
 
-from .api import fetch_book_data
+from .api import get_book_data
 from .const import UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
