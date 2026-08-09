@@ -1,0 +1,23 @@
+{
+    "book_added": "Das Buch wurde erfolgreich hinzugefügt.",
+    "book_deleted": "Das Buch wurde erfolgreich gelöscht.",
+    "book_not_found": "Das Buch mit der angegebenen ISBN wurde nicht gefunden.",
+    "search_results": "Suchergebnisse für '{{query}}':",
+    "isbn_scanned": "Scannen Sie den ISBN-Code.",
+    "error_occurred": "Ein Fehler ist aufgetreten: {{error}}",
+    "library_catalog": "Bibliothekskatalog",
+    "add_book": "Buch hinzufügen",
+    "delete_book": "Buch löschen",
+    "search_book": "Buch suchen",
+    "book_details": "Buchdetails",
+    "title": "Titel",
+    "author": "Autor",
+    "publisher": "Verlag",
+    "year": "Jahr",
+    "description": "Beschreibung",
+    "language": "Sprache",
+    "pages": "Seiten",
+    "location": "Standort",
+    "shelf": "Regal",
+    "compartment": "Fach"
+}

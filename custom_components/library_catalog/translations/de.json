@@ -1,0 +1,30 @@
+{
+    "library_catalog": {
+        "title": "Bibliothekskatalog",
+        "description": "Eine benutzerdefinierte Integration zur Verwaltung physischer Bücher.",
+        "add_book": {
+            "success": "Buch erfolgreich hinzugefügt.",
+            "error": "Fehler beim Hinzufügen des Buches."
+        },
+        "search": {
+            "no_results": "Keine Ergebnisse gefunden.",
+            "multiple_results": "Mehrere Ergebnisse gefunden. Bitte verfeinern Sie Ihre Suche."
+        },
+        "delete_book": {
+            "success": "Buch erfolgreich gelöscht.",
+            "error": "Fehler beim Löschen des Buches."
+        },
+        "config": {
+            "title": "Bibliothekskatalog Konfiguration",
+            "description": "Konfigurieren Sie die Einstellungen für den Bibliothekskatalog."
+        },
+        "errors": {
+            "invalid_isbn": "Ungültige ISBN-Nummer.",
+            "api_error": "Fehler beim Abrufen von Daten von der API."
+        },
+        "dashboard": {
+            "book_location": "Standort des Buches",
+            "book_details": "Buchdetails"
+        }
+    }
+}

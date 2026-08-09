@@ -1,0 +1,39 @@
+{
+    "library_catalog": {
+        "title": "Library Catalog",
+        "description": "A custom integration for managing physical books using their ISBN.",
+        "version": "1.0.0",
+        "requirements": [
+            "homeassistant>=2021.12.0",
+            "aiohttp",
+            "requests"
+        ],
+        "dependencies": [],
+        "codeowners": ["@your_github_username"],
+        "documentation": "https://github.com/your_github_username/library_catalog",
+        "issue_tracker": "https://github.com/your_github_username/library_catalog/issues"
+    },
+    "ui": {
+        "add_book": {
+            "title": "Add Book",
+            "description": "Add a new book to your library catalog."
+        },
+        "search_book": {
+            "title": "Search Book",
+            "description": "Search for a book by title, author, or ISBN."
+        },
+        "delete_book": {
+            "title": "Delete Book",
+            "description": "Remove a book from your library catalog."
+        }
+    },
+    "errors": {
+        "book_not_found": "The book could not be found.",
+        "invalid_isbn": "The provided ISBN is invalid.",
+        "database_error": "An error occurred while accessing the database."
+    },
+    "messages": {
+        "book_added": "The book has been successfully added to your catalog.",
+        "book_deleted": "The book has been successfully removed from your catalog."
+    }
+}

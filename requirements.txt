@@ -1,0 +1,3 @@
+aiohttp>=3.8.0
+aiosqlite>=0.17.0
+python-stdnum>=1.17
