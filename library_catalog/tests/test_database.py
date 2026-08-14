@@ -33,16 +33,16 @@ async def database(temp_db_path):
 def sample_book():
     """Create a sample book entity for testing."""
     return BookEntity(
-        isbn="9783442478951",
-        title="The Hitchhiker's Guide to the Galaxy",
-        subtitle="A Trilogy in Five Parts",
-        authors=["Douglas Adams"],
-        publisher="Del Rey",
-        year=1995,
-        description="A comedy science fiction series.",
+        isbn="9780316769174",  # Valid ISBN-13
+        title="The Catcher in the Rye",
+        subtitle="A Classic Novel",
+        authors=["J.D. Salinger"],
+        publisher="Little, Brown and Company",
+        year=1951,
+        description="A story about teenage rebellion.",
         cover_url="https://example.com/cover.jpg",
         language="en",
-        pages=224,
+        pages=234,
         location=BookLocation(room="Living Room", shelf="Shelf 1", compartment="Top"),
     )
 

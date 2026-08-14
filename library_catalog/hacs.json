@@ -1,15 +1,15 @@
 {
   "name": "Library Catalog",
-  "repository": "https://github.com/yourusername/library_catalog",
-  "version": "0.1.0",
+  "repository": "https://github.com/C0asterT0aster/library_catalog",
+  "version": "0.1.0-dev",
   "slug": "library_catalog",
   "description": "A Home Assistant custom integration for managing physical books using ISBN.",
-  "homepage": "https://github.com/yourusername/library_catalog",
-  "issues": "https://github.com/yourusername/library_catalog/issues",
+  "homepage": "https://github.com/C0asterT0aster/library_catalog",
+  "issues": "https://github.com/C0asterT0aster/library_catalog/issues",
   "license": "MIT",
-  "support": "https://github.com/yourusername/library_catalog/issues",
-  "install_type": "repository",
+  "support": "https://github.com/C0asterT0aster/library_catalog/issues",
+  "install_type": "integration",
   "dependencies": [],
-  "codeowners": ["@yourusername"],
+  "codeowners": ["@C0asterT0aster"],
   "requirements": []
 }
