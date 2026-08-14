@@ -1,6 +1,6 @@
 """Data models for Library Catalog integration."""
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
@@ -104,8 +104,8 @@ class BookEntity:
     language: Optional[str] = None
     pages: Optional[int] = None
     location: Optional[BookLocation] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation."""
@@ -136,13 +136,13 @@ class BookEntity:
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at)
         if not created_at:
-            created_at = datetime.utcnow()
+            created_at = datetime.now(timezone.utc)
 
         updated_at = data.get("updated_at")
         if isinstance(updated_at, str):
             updated_at = datetime.fromisoformat(updated_at)
         if not updated_at:
-            updated_at = datetime.utcnow()
+            updated_at = datetime.now(timezone.utc)
 
         return cls(
             isbn=data["isbn"],
@@ -165,7 +165,7 @@ class BookEntity:
         cls, book_data: BookData, location: Optional[BookLocation] = None
     ) -> "BookEntity":
         """Create BookEntity from BookData (API response)."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return cls(
             isbn=book_data.isbn,
             title=book_data.title,
