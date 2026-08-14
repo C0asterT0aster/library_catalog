@@ -1,0 +1,16 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Library Catalog einrichten",
+                "description": "Richten Sie Ihren persönlichen Bibliothekskatalog ein.",
+                "data": {
+                    "name": "Name"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Diese Integration wurde bereits konfiguriert."
+        }
+    }
+}

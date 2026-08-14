@@ -1,0 +1,16 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Set up Library Catalog",
+                "description": "Set up your personal library catalog.",
+                "data": {
+                    "name": "Name"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "This integration is already configured."
+        }
+    }
+}
