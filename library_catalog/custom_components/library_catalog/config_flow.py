@@ -1,27 +1,29 @@
 """Config flow for Library Catalog integration."""
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import voluptuous as vol
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, CONF_NAME
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class LibraryCatalogConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class LibraryCatalogConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Library Catalog."""
 
     VERSION = 1
 
     async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             # Check if already configured
