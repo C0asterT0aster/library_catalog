@@ -4,6 +4,13 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
+from .validation import (
+    ISBNValidator,
+    BookValidator,
+    LocationValidator,
+    ValidationError,
+)
+
 
 class BarCodeFormat(Enum):
     """Supported barcode formats."""
@@ -18,7 +25,7 @@ class BarCodeFormat(Enum):
 @dataclass
 class BookLocation:
     """Represents a hierarchical location for a book.
-    
+
     This structure supports storing structured location data without
     hardcoding available rooms, shelves, or compartments.
     Users define their own location hierarchy, which is stored with each book.
@@ -27,6 +34,10 @@ class BookLocation:
     room: str
     shelf: str
     compartment: str
+
+    def __post_init__(self):
+        """Validate location fields after initialization."""
+        LocationValidator.validate_location(self.room, self.shelf, self.compartment)
 
     def to_dict(self) -> Dict[str, str]:
         """Convert to dictionary representation."""
@@ -38,7 +49,11 @@ class BookLocation:
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]) -> "BookLocation":
-        """Create from dictionary representation."""
+        """Create from dictionary representation.
+
+        Raises:
+            ValidationError: If location data is invalid
+        """
         return cls(
             room=data.get("room", ""),
             shelf=data.get("shelf", ""),
@@ -53,9 +68,11 @@ class BookLocation:
 @dataclass
 class BookData:
     """Book data as retrieved from external APIs.
-    
+
     This represents raw book data from sources like Open Library or Google Books.
     Not all fields are guaranteed to be present.
+
+    This is the external API layer - minimal validation, accepts what APIs provide.
     """
 
     isbn: str
@@ -68,6 +85,20 @@ class BookData:
     cover_url: Optional[str] = None
     language: Optional[str] = None
     pages: Optional[int] = None
+
+    def __post_init__(self):
+        """Basic validation for API data."""
+        # Normalize ISBN
+        if self.isbn:
+            self.isbn = ISBNValidator.validate(self.isbn)
+
+        # Ensure title is not empty
+        if not self.title or not self.title.strip():
+            raise ValidationError("Title is required")
+
+        # Ensure at least one author
+        if not self.authors or len(self.authors) == 0:
+            raise ValidationError("At least one author is required")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation."""
@@ -88,9 +119,23 @@ class BookData:
 @dataclass
 class BookEntity:
     """Complete book entity stored in the database.
-    
+
     This represents a book as stored in the local SQLite database,
     including location information and timestamps.
+
+    This is the domain model - full validation, ready for persistence.
+
+    Future extensibility: Additional fields can be added here without
+    breaking existing functionality:
+    - categories: List[str] - Book categories/genres
+    - tags: List[str] - User-defined tags
+    - rating: Optional[float] - User rating (0-5)
+    - reading_status: Optional[str] - "to_read", "reading", "completed"
+    - notes: Optional[str] - Personal notes
+    - borrowed_by: Optional[str] - Name of person who borrowed the book
+    - borrowed_date: Optional[datetime] - When book was lent out
+    - series: Optional[str] - Book series name
+    - series_number: Optional[int] - Position in series
     """
 
     isbn: str  # Primary key
@@ -106,6 +151,24 @@ class BookEntity:
     location: Optional[BookLocation] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def __post_init__(self):
+        """Validate all fields after initialization."""
+        # Normalize and validate ISBN
+        self.isbn = ISBNValidator.validate(self.isbn)
+
+        # Validate required fields
+        BookValidator.validate_required_fields(self.isbn, self.title, self.authors)
+
+        # Validate individual fields
+        BookValidator.validate_title(self.title)
+        BookValidator.validate_subtitle(self.subtitle)
+        BookValidator.validate_authors(self.authors)
+        BookValidator.validate_publisher(self.publisher)
+        BookValidator.validate_year(self.year)
+        BookValidator.validate_pages(self.pages)
+        BookValidator.validate_description(self.description)
+        BookValidator.validate_language(self.language)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation."""

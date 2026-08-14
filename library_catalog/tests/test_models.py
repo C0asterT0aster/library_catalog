@@ -57,6 +57,7 @@ class TestBookData:
         book = BookData(
             isbn="9780451524935",
             title="1984",
+            authors=["George Orwell"],  # Required field
             subtitle="A Novel",
             publisher="Signet Classics",
             year=1949,
@@ -72,9 +73,9 @@ class TestSearchResult:
 
     def test_create_search_result(self):
         """Test creating a SearchResult instance."""
-        book1 = BookData(isbn="9780743273565", title="Book 1")
-        book2 = BookData(isbn="9780451524935", title="Book 2")
-        
+        book1 = BookData(isbn="9780743273565", title="Book 1", authors=["Author 1"])
+        book2 = BookData(isbn="9780451524935", title="Book 2", authors=["Author 2"])
+
         result = SearchResult(
             books=[book1, book2],
             total_count=42,
@@ -83,15 +84,15 @@ class TestSearchResult:
             limit=10,
             offset=0,
         )
-        
+
         assert len(result.books) == 2
         assert result.total_count == 42
         assert result.has_more()
 
     def test_search_result_pagination(self):
         """Test SearchResult pagination helpers."""
-        book1 = BookData(isbn="9780743273565", title="Book 1")
-        
+        book1 = BookData(isbn="9780743273565", title="Book 1", authors=["Author"])
+
         result = SearchResult(
             books=[book1],
             total_count=100,
@@ -100,7 +101,7 @@ class TestSearchResult:
             limit=10,
             offset=0,
         )
-        
+
         assert result.has_more()
         assert result.next_offset() == 10
 
