@@ -1,0 +1,15 @@
+{
+  "name": "Library Catalog",
+  "repository": "https://github.com/yourusername/library_catalog",
+  "version": "0.1.0",
+  "slug": "library_catalog",
+  "description": "A Home Assistant custom integration for managing physical books using ISBN.",
+  "homepage": "https://github.com/yourusername/library_catalog",
+  "issues": "https://github.com/yourusername/library_catalog/issues",
+  "license": "MIT",
+  "support": "https://github.com/yourusername/library_catalog/issues",
+  "install_type": "repository",
+  "dependencies": [],
+  "codeowners": ["@yourusername"],
+  "requirements": []
+}
