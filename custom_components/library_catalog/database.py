@@ -1,7 +1,7 @@
 """Database abstraction layer for Library Catalog integration."""
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
 import json
@@ -268,7 +268,7 @@ class LibraryCatalogDatabase:
             raise RuntimeError("Database not initialized")
 
         try:
-            book.updated_at = datetime.utcnow()
+            book.updated_at = datetime.now(timezone.utc)
             authors_json = json.dumps(book.authors)
             
             await self._connection.execute(
@@ -305,10 +305,10 @@ class LibraryCatalogDatabase:
 
     async def async_delete_book(self, isbn: str) -> bool:
         """Delete a book by ISBN.
-        
+
         Args:
             isbn: ISBN to delete
-            
+
         Returns:
             True if book was deleted, False if not found
         """
@@ -321,13 +321,59 @@ class LibraryCatalogDatabase:
                 (isbn,),
             )
             await self._connection.commit()
-            
+
             if cursor.rowcount > 0:
                 _LOGGER.debug("Book deleted: %s", isbn)
                 return True
             return False
         except Exception as e:
             _LOGGER.error("Failed to delete book: %s", e)
+            raise
+
+    async def async_update_location(
+        self, isbn: str, location: Optional[BookLocation]
+    ) -> bool:
+        """Update only the location of a book.
+
+        Args:
+            isbn: ISBN of the book to update
+            location: New location (None to clear location)
+
+        Returns:
+            True if book was updated, False if not found
+
+        Raises:
+            RuntimeError: If database not initialized
+        """
+        if not self._connection:
+            raise RuntimeError("Database not initialized")
+
+        try:
+            cursor = await self._connection.execute(
+                """
+                UPDATE books SET
+                    room = ?,
+                    shelf = ?,
+                    compartment = ?,
+                    updated_at = ?
+                WHERE isbn = ?
+                """,
+                (
+                    location.room if location else None,
+                    location.shelf if location else None,
+                    location.compartment if location else None,
+                    datetime.now(timezone.utc).isoformat(),
+                    isbn,
+                ),
+            )
+            await self._connection.commit()
+
+            if cursor.rowcount > 0:
+                _LOGGER.debug("Location updated for ISBN: %s", isbn)
+                return True
+            return False
+        except Exception as e:
+            _LOGGER.error("Failed to update location: %s", e)
             raise
 
     async def async_get_all_books(
