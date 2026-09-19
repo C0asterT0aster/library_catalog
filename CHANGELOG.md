@@ -14,6 +14,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Book cover caching
 - Import/export functionality
 
+## [0.1.1] - 2026-09-19
+
+### Added
+- Automatic setup service (`library_catalog.auto_setup`)
+  - Writes input helpers to configuration.yaml
+  - Creates scripts in scripts.yaml
+  - Creates automations in automations.yaml
+  - Shows notification with setup status
+
+### Changed
+- All "Scan" terminology changed to "Add Book" for clarity
+- Notification button: "➕ Add Book" instead of "📷 Scan ISBN"
+- Action names: `ADD_BOOK_ISBN` instead of `SCAN_BOOK_ISBN`
+- Script names: `start_book_adding` / `stop_book_adding`
+- Placeholder text: "Enter ISBN (13 digits)" - much clearer!
+
+### Documentation
+- Added AUTO_SETUP.md with automatic setup guide
+- Updated README.md with auto_setup instructions
+- Updated services.yaml with auto_setup service
+
+### Fixed
+- Auto-setup now writes YAML files directly (Home Assistant has no programmatic API for input helpers)
+
+### Known Issues
+- Auto-setup requires Home Assistant restart after running (for input helpers to load)
+
 ## [0.1.0] - 2026-09-19
 
 ### Added

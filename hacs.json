@@ -1,7 +1,7 @@
 {
   "name": "Library Catalog",
   "repository": "https://github.com/C0asterT0aster/library_catalog",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "slug": "library_catalog",
   "description": "A Home Assistant custom integration for managing physical books using ISBN.",
   "homepage": "https://github.com/C0asterT0aster/library_catalog",
