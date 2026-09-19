@@ -50,12 +50,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Services registered")
 
     # Set up webhook for barcode scanning
-    webhook_handler = WebhookHandler(hass, database)
+    webhook_handler = WebhookHandler(hass)
     hass.components.webhook.async_register(
         DOMAIN,
         "Library Catalog Scanner",
         WEBHOOK_ID,
-        webhook_handler.async_handle_webhook,
+        webhook_handler.handle_barcode,
     )
     _LOGGER.info("Webhook registered at /api/webhook/%s", WEBHOOK_ID)
 
