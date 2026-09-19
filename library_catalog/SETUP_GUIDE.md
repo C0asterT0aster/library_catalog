@@ -1,4 +1,26 @@
-# Library Catalog - Quick Start Guide
+# Library Catalog - Setup Guide
+
+> **⚠️ IMPORTANT: Camera Scanning Not Available Yet**
+> 
+> This guide sets up a **manual ISBN entry system** via mobile notifications.
+> **Camera/barcode scanning from notifications is not yet possible** due to iOS and Android limitations.
+> 
+> **What Works:**
+> - ✅ Dashboard button to start scanning
+> - ✅ Notification appears on phone
+> - ✅ Text input field for ISBN
+> - ✅ Manual ISBN entry (type the number)
+> - ✅ Book automatically added to catalog
+> 
+> **What Doesn't Work:**
+> - ❌ Camera doesn't open from notification
+> - ❌ No barcode auto-recognition in text field
+> 
+> **Workaround:** Manually type the ISBN from the book (13 digits, no dashes).
+> 
+> See CAMERA_LIMITATIONS.md for technical details and future solutions.
+
+---
 
 ## What You're Building
 
@@ -81,20 +103,26 @@ After restart:
    - ✅ Books Scanned Today
    - ✅ Last Book Scan Time
 
-## Step 2: Find Your iPhone Device Name (1 minute)
+## Step 2: Find Your Notification Service (1 minute)
 
-You need this for notifications!
+You need to know which notification service to use.
 
-1. Go to **Settings** → **Devices & Services**
-2. Click on **Mobile App**
-3. Find your iPhone in the list
-4. Click on it
-5. Look at the top - note the device name, e.g.:
-   - `mobile_app_iphone`
-   - `mobile_app_johns_iphone`
-   - `mobile_app_iphone_2`
+### Option A: Use notify.notify (Easiest - Works for Everyone)
 
-**Write this down!** You'll need it in the next steps.
+Use `notify.notify` which sends to **all mobile devices** automatically.
+
+**Skip to Step 3 and use `notify.notify` instead of `mobile_app_YOUR_DEVICE`!**
+
+### Option B: Find Your Specific Device (If you want device-specific)
+
+1. Go to **Developer Tools** → **Services**
+2. Start typing "notify."
+3. You'll see services like:
+   - `notify.notify` ← Use this one!
+   - `notify.mobile_app_iphone_von_malte` ← Or this for specific device
+4. Note the exact name
+
+**Recommendation:** Use `notify.notify` - it's universal and works with multiple devices!
 
 ## Step 3: Add Scripts (3 minutes)
 
@@ -118,7 +146,7 @@ start_book_scanning:
       target:
         entity_id: input_boolean.book_scanning_active
     
-    - service: notify.mobile_app_YOUR_DEVICE
+    - service: notify.notify
       data:
         title: "📚 Book Scanner Ready"
         message: "Location: {{ states('input_text.book_scan_room') }} > {{ states('input_text.book_scan_shelf') }}"
@@ -140,7 +168,7 @@ stop_book_scanning:
       target:
         entity_id: input_boolean.book_scanning_active
     
-    - service: notify.mobile_app_YOUR_DEVICE
+    - service: notify.notify
       data:
         title: "✅ Scanning Complete"
         message: "Added {{ states('input_number.books_scanned_today') | int }} books"
@@ -148,7 +176,7 @@ stop_book_scanning:
           tag: "book_scanner"
 ```
 
-3. **IMPORTANT:** Replace **BOTH** instances of `mobile_app_YOUR_DEVICE` with your actual device name from Step 2!
+3. **IMPORTANT:** No device name needed - `notify.notify` works for all devices!
 
 4. **Save** the file
 5. Go to **Developer Tools** → **YAML** → **Reload Scripts**
@@ -195,7 +223,7 @@ action:
       entity_id: input_datetime.last_book_scan_time
     data:
       timestamp: "{{ now().timestamp() }}"
-  - service: notify.mobile_app_YOUR_DEVICE
+  - service: notify.notify
     data:
       title: "✅ Book Added!"
       message: "ISBN: {{ scanned_isbn }} | Total: {{ states('input_number.books_scanned_today') | int }}"
@@ -213,7 +241,7 @@ action:
 mode: single
 ```
 
-6. **IMPORTANT:** Replace `mobile_app_YOUR_DEVICE` with your device name!
+6. **IMPORTANT:** No device name needed - `notify.notify` sends to all devices!
 7. Click **Save**
 
 ### Add Second Automation (Stop Button)
@@ -390,17 +418,33 @@ Now test your scanner!
 
 ## How to Scan Real Books
 
-When scanning actual books:
+**Current Method (Manual Entry):**
 
-1. Start scanning (same as test)
-2. Tap "Scan ISBN" in notification
-3. **Point your iPhone camera** at the book's ISBN barcode
-4. iOS automatically recognizes barcodes (iOS 15+)
-5. Tap the recognized number to paste it
-6. Tap "Add Book"
-7. Keep scanning more books!
+1. Start scanning (tap button in dashboard)
+2. Notification appears on your phone
+3. Tap "Scan ISBN" in notification
+4. Text field appears
+5. **Look at book spine or back cover**
+6. **Find the barcode** (usually labeled ISBN with 13 digits)
+7. **Type the 13-digit number** (example: 9780451524935)
+8. Ignore dashes if present (978-0-451-52493-5 → 9780451524935)
+9. Tap "Add Book"
+10. Book is added automatically!
+11. Notification shows "Scan Next" - repeat for more books
 
-**Note:** The camera recognition is built into iOS - you don't need any special app!
+**Tips for Faster Entry:**
+- Use good lighting to read the ISBN clearly
+- ISBNs are usually on back cover bottom or book spine
+- Type only numbers, skip dashes
+- Most modern books have 13-digit ISBN (starts with 978 or 979)
+- If wrong ISBN, book won't be found - try again
+
+**Alternative: Use a Computer**
+- Open Home Assistant on desktop/laptop
+- Use Developer Tools → Services → library_catalog.add_book
+- Much faster to type with keyboard!
+
+**Future:** Camera scanning will be added when technical limitations are resolved.
 
 ## Troubleshooting
 

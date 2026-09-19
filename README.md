@@ -1,5 +1,26 @@
 # Library Catalog Integration
 
+> **⚠️ WORK IN PROGRESS - UNDER ACTIVE DEVELOPMENT**
+> 
+> This integration is currently in **active development** and **not production-ready**.
+> 
+> **Current Status:**
+> - ✅ Core functionality: Add, search, delete books (WORKING)
+> - ✅ Manual book entry (WORKING)
+> - ✅ Database and API integration (WORKING)
+> - 🚧 Barcode scanning workflow (IN DEVELOPMENT)
+> - 🚧 Multi-device support (IN DEVELOPMENT)
+> - 📋 Full testing and documentation (PENDING)
+> 
+> **Known Limitations:**
+> - Barcode scanning requires manual ISBN entry
+> - Camera integration varies by platform (iOS/Android)
+> - Multi-device notification setup needs configuration
+> 
+> Use at your own risk and expect changes. Contributions welcome!
+
+---
+
 A Home Assistant custom integration for managing your physical book collection using ISBN barcodes.
 
 [![GitHub release](https://img.shields.io/github/release/C0asterT0aster/library_catalog.svg)](https://github.com/C0asterT0aster/library_catalog/releases)
