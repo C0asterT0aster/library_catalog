@@ -2,7 +2,7 @@
 
 add_book:
   name: Add Book
-  description: Add a book to your library catalog by ISBN
+  description: Add a book to your library catalog by ISBN (fetches metadata from APIs)
   fields:
     isbn:
       name: ISBN
@@ -21,6 +21,98 @@ add_book:
         room: "Living Room"
         shelf: "Main Shelf"
         compartment: "Top"
+
+add_book_manual:
+  name: Add Book Manually
+  description: Add a book with manual metadata entry (no API calls needed - works offline)
+  fields:
+    isbn:
+      name: ISBN
+      description: The ISBN-10 or ISBN-13 of the book
+      required: true
+      example: "9780451524935"
+      selector:
+        text:
+    title:
+      name: Title
+      description: Book title
+      required: true
+      example: "1984"
+      selector:
+        text:
+    authors:
+      name: Authors
+      description: List of author names
+      required: true
+      example: '["George Orwell"]'
+      selector:
+        object:
+    location:
+      name: Location
+      description: Physical location of the book
+      required: true
+      selector:
+        object:
+      example: |
+        room: "Living Room"
+        shelf: "Main Shelf"
+        compartment: "Top"
+    subtitle:
+      name: Subtitle
+      description: Book subtitle (optional)
+      required: false
+      example: "A Novel"
+      selector:
+        text:
+    publisher:
+      name: Publisher
+      description: Publisher name (optional)
+      required: false
+      example: "Signet Classic"
+      selector:
+        text:
+    year:
+      name: Publication Year
+      description: Year published (optional)
+      required: false
+      example: 1949
+      selector:
+        number:
+          min: 1000
+          max: 3000
+          mode: box
+    description:
+      name: Description
+      description: Book description (optional)
+      required: false
+      example: "A dystopian social science fiction novel"
+      selector:
+        text:
+          multiline: true
+    cover_url:
+      name: Cover Image URL
+      description: URL to book cover image (optional)
+      required: false
+      example: "https://covers.openlibrary.org/b/id/123456-L.jpg"
+      selector:
+        text:
+    language:
+      name: Language
+      description: Language code (optional)
+      required: false
+      example: "en"
+      selector:
+        text:
+    pages:
+      name: Pages
+      description: Number of pages (optional)
+      required: false
+      example: 328
+      selector:
+        number:
+          min: 1
+          max: 10000
+          mode: box
 
 search:
   name: Search Books

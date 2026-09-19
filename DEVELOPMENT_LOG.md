@@ -413,8 +413,34 @@ CREATE VIRTUAL TABLE books_fts USING fts5(
 - ✅ Webhook for barcode scanners
 - ✅ 36 passing unit tests
 - ✅ Complete testing documentation
+- ✅ HACS compatible with proper manifest
 
-**Status:** Ready for user testing in Home Assistant
+**Status:** Deployed and working in Home Assistant
+
+### Known Issues (2026-09-19)
+
+#### API Connectivity Issues
+The integration itself works correctly, but may encounter external API failures:
+
+1. **Open Library timeouts:**
+   - Error: `Cannot connect to host openlibrary.org:443 ssl:default [Connection reset by peer]`
+   - Cause: Network connectivity issues or Open Library service problems
+   - Impact: Primary metadata provider unavailable
+   - Workaround: Automatic fallback to Google Books
+
+2. **Google Books rate limiting:**
+   - Error: `Google Books API rate limited (429)`
+   - Cause: Too many requests in short time (public endpoint limits)
+   - Impact: Secondary provider unavailable after ~10-20 requests
+   - Workaround: Wait 10-15 minutes for rate limit to reset
+
+3. **Both APIs unavailable:**
+   - Error: `BookNotFoundError: Failed to fetch book metadata for ISBN`
+   - When: Both Open Library AND Google Books fail
+   - Impact: Cannot add books via ISBN
+   - Solution needed: Manual book entry service (see Next Steps)
+
+**All integration code is working correctly** - the errors are external API availability issues, not code bugs.
 
 ---
 

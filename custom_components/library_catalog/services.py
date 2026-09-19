@@ -10,6 +10,7 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     DOMAIN,
     SERVICE_ADD_BOOK,
+    SERVICE_ADD_BOOK_MANUAL,
     SERVICE_SEARCH,
     SERVICE_DELETE_BOOK,
     CONF_ISBN,
@@ -20,6 +21,15 @@ from .const import (
     CONF_QUERY,
     CONF_SEARCH_BY,
     CONF_LIMIT,
+    CONF_TITLE,
+    CONF_SUBTITLE,
+    CONF_AUTHORS,
+    CONF_PUBLISHER,
+    CONF_YEAR,
+    CONF_DESCRIPTION,
+    CONF_COVER_URL,
+    CONF_LANGUAGE,
+    CONF_PAGES,
     SEARCH_DEFAULT_LIMIT,
     ERROR_BOOK_ALREADY_EXISTS,
     ERROR_BOOK_NOT_FOUND,
@@ -51,6 +61,20 @@ SEARCH_SCHEMA = vol.Schema({
 
 DELETE_BOOK_SCHEMA = vol.Schema({
     vol.Required(CONF_ISBN): cv.string,
+})
+
+ADD_BOOK_MANUAL_SCHEMA = vol.Schema({
+    vol.Required(CONF_ISBN): cv.string,
+    vol.Required(CONF_TITLE): cv.string,
+    vol.Required(CONF_AUTHORS): cv.ensure_list,
+    vol.Required(CONF_LOCATION): LOCATION_SCHEMA,
+    vol.Optional(CONF_SUBTITLE): cv.string,
+    vol.Optional(CONF_PUBLISHER): cv.string,
+    vol.Optional(CONF_YEAR): cv.positive_int,
+    vol.Optional(CONF_DESCRIPTION): cv.string,
+    vol.Optional(CONF_COVER_URL): cv.url,
+    vol.Optional(CONF_LANGUAGE): cv.string,
+    vol.Optional(CONF_PAGES): cv.positive_int,
 })
 
 
@@ -128,6 +152,76 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         except Exception as err:
             _LOGGER.error("Failed to add book: %s", err)
+            raise
+
+    async def add_book_manual_service(call: ServiceCall) -> None:
+        """Handle adding a book with manual metadata entry (no API calls)."""
+        isbn = call.data[CONF_ISBN]
+        title = call.data[CONF_TITLE]
+        authors = call.data[CONF_AUTHORS]
+        location_data = call.data[CONF_LOCATION]
+
+        try:
+            # Validate ISBN
+            validated_isbn = validate_isbn(isbn)
+
+            database = _get_database(hass)
+            if not database:
+                raise ValueError("Library Catalog database not available")
+
+            # Check if book already exists
+            existing_book = await database.async_get_book(validated_isbn)
+            if existing_book:
+                _LOGGER.warning("Book already exists: %s", validated_isbn)
+                raise ValueError(ERROR_BOOK_ALREADY_EXISTS)
+
+            # Create location
+            location = BookLocation(
+                room=location_data[CONF_ROOM],
+                shelf=location_data[CONF_SHELF],
+                compartment=location_data[CONF_COMPARTMENT],
+            )
+
+            # Create book entity with manual data
+            now = datetime.now(timezone.utc)
+            book_entity = BookEntity(
+                isbn=validated_isbn,
+                title=title,
+                subtitle=call.data.get(CONF_SUBTITLE),
+                authors=authors,
+                publisher=call.data.get(CONF_PUBLISHER),
+                year=call.data.get(CONF_YEAR),
+                description=call.data.get(CONF_DESCRIPTION),
+                cover_url=call.data.get(CONF_COVER_URL),
+                language=call.data.get(CONF_LANGUAGE),
+                pages=call.data.get(CONF_PAGES),
+                location=location,
+                created_at=now,
+                updated_at=now,
+            )
+
+            # Add to database
+            await database.async_add_book(book_entity)
+
+            _LOGGER.info("Book added manually: %s - %s", book_entity.title, validated_isbn)
+
+            # Fire event for automations
+            hass.bus.async_fire(
+                f"{DOMAIN}_book_added",
+                {
+                    "isbn": validated_isbn,
+                    "title": book_entity.title,
+                    "authors": book_entity.authors,
+                    "location": {
+                        "room": location.room,
+                        "shelf": location.shelf,
+                        "compartment": location.compartment,
+                    },
+                }
+            )
+
+        except Exception as err:
+            _LOGGER.error("Failed to add book manually: %s", err)
             raise
 
     async def search_service(call: ServiceCall) -> dict:
@@ -239,6 +333,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(
         DOMAIN,
+        SERVICE_ADD_BOOK_MANUAL,
+        add_book_manual_service,
+        schema=ADD_BOOK_MANUAL_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_SEARCH,
         search_service,
         schema=SEARCH_SCHEMA,
@@ -258,6 +359,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 async def async_unload_services(hass: HomeAssistant) -> None:
     """Unload services for the Library Catalog integration."""
     hass.services.async_remove(DOMAIN, SERVICE_ADD_BOOK)
+    hass.services.async_remove(DOMAIN, SERVICE_ADD_BOOK_MANUAL)
     hass.services.async_remove(DOMAIN, SERVICE_SEARCH)
     hass.services.async_remove(DOMAIN, SERVICE_DELETE_BOOK)
     _LOGGER.info("Library Catalog services unregistered")

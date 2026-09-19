@@ -25,6 +25,7 @@ COVER_URL_ONLY_V1: Final = True  # v1 stores URLs only, no local caching yet
 # SERVICE NAMES & IDS
 # ============================================================================
 SERVICE_ADD_BOOK: Final = "add_book"
+SERVICE_ADD_BOOK_MANUAL: Final = "add_book_manual"
 SERVICE_SEARCH: Final = "search"
 SERVICE_DELETE_BOOK: Final = "delete_book"
 
