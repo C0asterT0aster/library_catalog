@@ -5,6 +5,7 @@ from pathlib import Path
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.components import webhook
 
 from .const import DOMAIN, WEBHOOK_ID
 from .coordinator import LibraryCatalogCoordinator
@@ -51,7 +52,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Set up webhook for barcode scanning
     webhook_handler = WebhookHandler(hass)
-    hass.components.webhook.async_register(
+    webhook.async_register(
+        hass,
         DOMAIN,
         "Library Catalog Scanner",
         WEBHOOK_ID,
@@ -67,7 +69,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info("Unloading Library Catalog integration")
 
     # Unregister webhook
-    hass.components.webhook.async_unregister(WEBHOOK_ID)
+    webhook.async_unregister(hass, WEBHOOK_ID)
 
     # Close database
     data = hass.data[DOMAIN].pop(entry.entry_id)
