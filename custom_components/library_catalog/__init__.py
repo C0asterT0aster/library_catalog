@@ -55,6 +55,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await async_setup_services(hass)
         _LOGGER.info("Services registered")
 
+        # Register auto-setup service
+        from .setup_service import async_setup_automation_service
+        await async_setup_automation_service(hass)
+        _LOGGER.info("Auto-setup service registered")
+
     # Set up webhook for barcode scanning
     webhook_handler = WebhookHandler(hass)
     async_register(

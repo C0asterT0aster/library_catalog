@@ -62,7 +62,22 @@ A Home Assistant custom integration for managing your physical book collection u
 
 ## Configuration
 
-After installation, the integration will appear in Home Assistant integrations. The configuration is minimal - the integration works out of the box without additional configuration.
+After installation, set up the book adding workflow automatically:
+
+### Quick Setup (Recommended)
+
+1. Go to **Developer Tools** → **Services**
+2. Call this service:
+   ```yaml
+   service: library_catalog.auto_setup
+   ```
+3. Done! This creates all input helpers, scripts, and automations automatically.
+
+See **AUTO_SETUP.md** for detailed instructions.
+
+### Manual Setup
+
+If you prefer manual configuration, see **SETUP_GUIDE.md** for step-by-step YAML setup.
 
 ### Services
 

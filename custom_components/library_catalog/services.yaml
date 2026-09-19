@@ -188,3 +188,8 @@ reload_database:
   name: Reload Database
   description: Force a refresh of library statistics and state from the database
   fields: {}
+
+auto_setup:
+  name: Automatic Setup
+  description: Automatically create scripts and automations for book management (creates input helpers, scripts, and automations)
+  fields: {}
