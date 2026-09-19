@@ -1,0 +1,71 @@
+# Service definitions for Library Catalog integration
+
+add_book:
+  name: Add Book
+  description: Add a book to your library catalog by ISBN
+  fields:
+    isbn:
+      name: ISBN
+      description: The ISBN-10 or ISBN-13 of the book
+      required: true
+      example: "9780451524935"
+      selector:
+        text:
+    location:
+      name: Location
+      description: Physical location of the book
+      required: true
+      selector:
+        object:
+      example: |
+        room: "Living Room"
+        shelf: "Main Shelf"
+        compartment: "Top"
+
+search:
+  name: Search Books
+  description: Search for books in your library
+  fields:
+    query:
+      name: Search Query
+      description: What to search for (title, author name, ISBN, or room)
+      required: true
+      example: "Harry Potter"
+      selector:
+        text:
+    search_by:
+      name: Search By
+      description: Which field to search in
+      required: false
+      default: "title"
+      example: "title"
+      selector:
+        select:
+          options:
+            - "title"
+            - "author"
+            - "isbn"
+            - "room"
+    limit:
+      name: Limit
+      description: Maximum number of results to return
+      required: false
+      default: 50
+      example: 50
+      selector:
+        number:
+          min: 1
+          max: 1000
+          mode: box
+
+delete_book:
+  name: Delete Book
+  description: Remove a book from your library catalog
+  fields:
+    isbn:
+      name: ISBN
+      description: The ISBN of the book to delete
+      required: true
+      example: "9780451524935"
+      selector:
+        text:
