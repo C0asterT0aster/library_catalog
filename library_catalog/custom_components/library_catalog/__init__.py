@@ -10,6 +10,7 @@ from homeassistant.components.webhook import async_register, async_unregister
 from .const import DOMAIN, WEBHOOK_ID
 from .coordinator import LibraryCatalogCoordinator
 from .database import LibraryCatalogDatabase
+from .book_service import LibraryBookService
 from .webhook import WebhookHandler
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,14 +35,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to initialize database: %s", err)
         raise ConfigEntryNotReady(f"Database initialization failed: {err}") from err
 
+    # Create book service (business logic layer)
+    book_service = LibraryBookService(hass, database)
+
     # Create coordinator
     coordinator = LibraryCatalogCoordinator(hass, entry, database)
     await coordinator.async_config_entry_first_refresh()
 
-    # Store coordinator and database
+    # Store coordinator, database, and book service
     hass.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
         "database": database,
+        "book_service": book_service,
     }
 
     # Register services (only once, not per entry)
