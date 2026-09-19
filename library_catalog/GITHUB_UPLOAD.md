@@ -20,7 +20,7 @@ Your local repository is **ready to push**. Follow these steps to upload to GitH
 Open PowerShell and run:
 
 ```powershell
-cd "C:\Users\Malte\Desktop\Dokumente\HA App\Library-Catalog\library_catalog"
+cd "path\to\Library-Catalog\library_catalog"
 git push -u origin main
 ```
 

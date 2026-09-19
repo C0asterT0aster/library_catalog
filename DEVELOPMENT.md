@@ -2,6 +2,72 @@
 
 This document describes the architecture and development process for Library Catalog.
 
+## Security & Privacy Guidelines
+
+### Information to Keep Private
+
+When developing or sharing code, **never commit** these items to public repositories:
+
+❌ **Personal Information:**
+- Real names in examples (use "John Doe", "YOUR_NAME")
+- Personal email addresses
+- Phone numbers
+- Personal device names in examples
+
+❌ **Network Information:**
+- Local IP addresses (use `192.168.x.x` or `YOUR_HA_IP`)
+- Port numbers (except standard ones like 8123)
+- Domain names (use `your-instance.ui.nabu.casa`)
+- WiFi SSIDs
+
+❌ **Credentials & Tokens:**
+- API keys (use `YOUR_API_KEY`)
+- Access tokens (use `YOUR_ACCESS_TOKEN`)
+- Passwords
+- Webhook secrets
+- OAuth tokens
+
+❌ **System Paths:**
+- User directories (use `path/to/directory`)
+- Absolute paths with usernames
+- Drive letters with personal folders
+
+✅ **Safe to Keep:**
+- Copyright name in LICENSE file
+- GitHub username
+- Public repository URLs
+- Example ISBNs (9780451524935)
+- Generic example data
+
+### Sanitization Checklist
+
+Before committing documentation:
+
+1. **Replace specific IPs** → `YOUR_HA_IP` or `192.168.x.x`
+2. **Replace device names** → `mobile_app_your_phone`
+3. **Replace domains** → `your-instance.ui.nabu.casa`
+4. **Replace paths** → `path/to/directory`
+5. **Check for names** in examples → Use generic names
+6. **Review logs** for sensitive data before sharing
+
+### Example Sanitization
+
+**Before:**
+```yaml
+- service: notify.mobile_app_maltes_iphone
+  data:
+    message: "Connected to 192.168.1.100"
+```
+
+**After:**
+```yaml
+- service: notify.mobile_app_your_phone
+  data:
+    message: "Connected to YOUR_HA_IP"
+```
+
+---
+
 ## Architecture Overview
 
 ### Components
@@ -27,12 +93,20 @@ Library Catalog Integration
 │   ├── Google Books Client
 │   └── Fallback Logic
 │
+├── Business Logic Layer (book_service.py)
+│   └── LibraryBookService - Service layer
+│       ├── add_book_by_isbn - ISBN workflow
+│       ├── add_book_manual - Manual entry
+│       ├── search_books - Search operations
+│       ├── update_location - Location management
+│       └── Exception handling
+│
 ├── Home Assistant Integration
 │   ├── Config Flow (config_flow.py)
 │   ├── Coordinator (coordinator.py)
 │   ├── Services (services.py)
 │   ├── Webhook (webhook.py)
-│   └── Init (\_\_init\_\_.py)
+│   └── Init (__init__.py)
 │
 ├── Configuration
 │   ├── Constants (const.py)
@@ -60,21 +134,28 @@ async def async_add_book(self, book: BookEntity) -> None:
     """Type hints on every function."""
 ```
 
-### 3. Scalability
+### 3. Separation of Concerns
+- **Models**: Data structures only
+- **Database**: Persistence layer
+- **API**: External service communication
+- **Book Service**: Business logic (independent of Home Assistant)
+- **Services**: Home Assistant integration (thin wrappers)
+
+### 4. Scalability
 Designed for 10,000+ book libraries:
 - 7 performance indexes on common search fields
 - FTS5 virtual table for full-text search
 - Pagination support (LIMIT/OFFSET)
 - Efficient query construction
 
-### 4. Extensibility
+### 5. Extensibility
 Future features prepared without redesign:
 - Location hierarchy ready for complex structures
 - Cover URL architecture ready for local caching
 - Schema versioning for migrations
 - Feature flags in constants
 
-### 5. User-Configurable
+### 6. User-Configurable
 No hardcoded values:
 - Rooms, shelves, compartments defined by users
 - Custom locations stored with books
@@ -98,24 +179,28 @@ CREATE TABLE books (
     room TEXT,
     shelf TEXT,
     compartment TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
 )
 ```
 
 ### Indexes
-- `idx_books_title` - For title searches
-- `idx_books_authors` - For author searches
-- `idx_books_isbn` - For ISBN lookups
-- `idx_books_publisher` - For publisher filtering
-- `idx_books_year` - For year-based queries
-- `idx_books_room` - For location-based dashboard queries
-- `idx_books_created_at` - For sorting/pagination
+```sql
+CREATE INDEX idx_books_title ON books(title);
+CREATE INDEX idx_books_authors ON books(authors);
+CREATE INDEX idx_books_year ON books(year);
+CREATE INDEX idx_books_room ON books(room);
+CREATE INDEX idx_books_shelf ON books(shelf);
+CREATE INDEX idx_books_created_at ON books(created_at);
+CREATE INDEX idx_books_updated_at ON books(updated_at);
+```
 
 ### Full-Text Search
 ```sql
 CREATE VIRTUAL TABLE books_fts USING fts5(
+    isbn,
     title,
+    subtitle,
     authors,
     description,
     content=books
@@ -124,285 +209,410 @@ CREATE VIRTUAL TABLE books_fts USING fts5(
 
 ## API Integration
 
-### Open Library
-- **Endpoint**: `https://openlibrary.org/api/books`
-- **Query**: `?bibkeys=ISBN:XXXX&format=json&jscmd=data`
-- **Timeout**: 10 seconds
-- **Fallback**: Google Books if no result
-
-### Google Books
-- **Endpoint**: `https://www.googleapis.com/books/v1/volumes`
-- **Query**: `?q=isbn:XXXX`
-- **Timeout**: 10 seconds
-- **Rate Limit**: 100 QPS
-
-### ISBN Validation
-- Supports ISBN-10 and ISBN-13
-- ISBN-10 converted to ISBN-13
-- Checksum validation using `python-stdnum`
-- Tolerant barcode parsing for scanners
-
-## Service Definitions
-
-### library_catalog.add_book
-```yaml
-Service: library_catalog.add_book
-Parameters:
-  isbn: string (required)
-  location:
-    room: string (optional)
-    shelf: string (optional)
-    compartment: string (optional)
-Returns:
-  isbn: string
-  title: string
-  authors: list
-  # ... all book fields
+### Open Library API
+Primary metadata source:
+```python
+URL = "https://openlibrary.org/api/books"
+PARAMS = {"bibkeys": f"ISBN:{isbn}", "format": "json", "jscmd": "data"}
 ```
 
-### library_catalog.search
-```yaml
-Service: library_catalog.search
-Parameters:
-  query: string (required)
-  search_by: string (optional: title, author, isbn)
-  limit: number (optional, max 1000)
-Returns:
-  results: list of books
-  total_count: number
-  query: string
-  search_type: string
-  has_more: boolean
+Response provides:
+- Title, subtitle
+- Authors (with keys)
+- Publishers
+- Publish date
+- Cover URLs (S, M, L sizes)
+- Number of pages
+- Subjects
+
+### Google Books API
+Fallback source when Open Library fails:
+```python
+URL = "https://www.googleapis.com/books/v1/volumes"
+PARAMS = {"q": f"isbn:{isbn}"}
 ```
 
-### library_catalog.delete_book
-```yaml
-Service: library_catalog.delete_book
-Parameters:
-  isbn: string (required)
-Returns:
-  success: boolean
-  isbn: string
+Response provides similar data in different format.
+
+## Service Layer Architecture
+
+### LibraryBookService
+
+Business logic separated from Home Assistant:
+
+```python
+class LibraryBookService:
+    """Business logic for book management."""
+    
+    async def add_book_by_isbn(self, isbn: str, location: BookLocation) -> BookEntity:
+        """Complete ISBN workflow:
+        1. Validate ISBN
+        2. Check duplicates
+        3. Fetch metadata
+        4. Create entity
+        5. Store in database
+        """
+    
+    async def add_book_manual(self, isbn: str, title: str, ...) -> BookEntity:
+        """Manual entry for offline operation."""
+    
+    async def search_books(self, query: str, search_by: str) -> SearchResult:
+        """Delegate to appropriate search method."""
 ```
 
-## Webhook Integration
+**Why separate?**
+- Testable without Home Assistant
+- Reusable across different interfaces
+- Clear business logic boundaries
+- Easy to mock for testing
 
-### Endpoint
-`/api/webhook/library_catalog_scanner`
+### Home Assistant Services
 
-### Supported Input Formats
+Thin wrappers around service layer:
 
-All these formats are automatically detected and normalized:
-```json
-{"isbn": "9783442478951"}
-{"code": "9783442478951", "format": "EAN_13"}
-{"barcode": "9783442478951", "format": "EAN-13"}
+```python
+async def add_book_service(call: ServiceCall) -> None:
+    """Home Assistant service handler.
+    
+    1. Extract parameters from call
+    2. Get book_service instance
+    3. Delegate to book_service.add_book_by_isbn()
+    4. Fire Home Assistant event
+    5. Handle errors
+    """
 ```
 
-### Processing Flow
-1. Extract ISBN/barcode from payload
-2. Remove formatting characters
-3. Validate ISBN-10 or ISBN-13
-4. Convert ISBN-10 to ISBN-13
-5. Look up in database or fetch from APIs
-6. Store in database
+## Webhook Architecture
 
-## Data Flow
+### Security Model
 
-### Adding a Book
-```
-1. User calls library_catalog.add_book service
-2. ISBN validation occurs
-3. API lookup (Open Library or Google Books)
-4. Data normalization
-5. Database insertion
-6. Return book details
+The webhook uses Home Assistant's built-in webhook system:
+
+```python
+from homeassistant.components import webhook
+
+webhook.async_register(
+    hass,
+    DOMAIN,
+    "Library Catalog Scanner",
+    WEBHOOK_ID,
+    handler.handle_barcode,
+)
 ```
 
-### Searching for Books
-```
-1. User calls library_catalog.search service
-2. Query passed to database search method
-3. Appropriate index used for query type
-4. Pagination applied (LIMIT/OFFSET)
-5. Results returned with total count
-```
+**Security features:**
+- No authentication tokens needed
+- Home Assistant handles auth
+- Rate limiting built-in
+- HTTPS support via Home Assistant
 
-### Webhook Barcode
-```
-1. Scanner sends POST to webhook endpoint
-2. Payload parsed and ISBN extracted
-3. ISBN normalized
-4. Checked if already in database
-5. If not found, fetch from APIs
-6. Store in database with timestamp
-```
+### Workflow
 
-## Development Phases
+1. **Receive barcode** via POST to `/api/webhook/library_catalog_scanner`
+2. **Validate payload** - Check JSON format, ISBN present
+3. **Normalize ISBN** - Convert ISBN-10 to ISBN-13
+4. **Check duplicates** - Query database
+5. **Fetch metadata** - If new book, call APIs
+6. **Return result** - Complete book data + exists status
+7. **Fire event** - `library_catalog_barcode_scanned` for automations
 
-### Phase 1: Infrastructure ✅
-- Commit 1.1: Constants & Configuration
-- Commit 1.2: Database Layer & Models
-- Commit 1.3: API Client Layer
-
-### Phase 2: Integration
-- Commit 2.1: Config Flow
-- Commit 2.2: Core Integration Setup
-- Commit 2.3: Services Registration
-
-### Phase 3: Interaction
-- Commit 3.1: Barcode Webhook
-- Commit 3.2: Diagnostics
-
-### Phase 4: Frontend
-- Commit 4.1: Book Data Models
-- Commit 4.2: Entity Definitions
-
-### Phase 5: Polish
-- Commit 5.1: Localization
-- Commit 5.2: Documentation
-
-### Phase 6: Quality
-- Commit 6.1: Unit Tests
-- Commit 6.2: Integration Tests
-- Commit 6.3: HACS Validation
+**Important:** The webhook does NOT store books automatically. Storage requires a physical location which must be provided via the `add_book` service.
 
 ## Error Handling
 
-### Strategy
-- All async operations wrapped in try/catch
-- Errors logged with context
-- User-friendly error messages in services
-- Webhook errors return appropriate HTTP status
+### Custom Exceptions
 
-### Common Errors
-- `ISBN_CHECKSUM_FAILED` - Invalid ISBN
-- `BOOK_ALREADY_EXISTS` - Duplicate ISBN
-- `API_UNREACHABLE` - No internet connection
-- `API_RATE_LIMITED` - Too many requests
-- `DATABASE_ERROR` - Database operation failed
+```python
+class BookServiceError(Exception):
+    """Base exception."""
+    pass
+
+class DuplicateISBNError(BookServiceError):
+    """ISBN already exists."""
+    def __init__(self, isbn: str, existing_book: BookEntity):
+        self.isbn = isbn
+        self.existing_book = existing_book
+
+class BookNotFoundError(BookServiceError):
+    """Book not found."""
+    def __init__(self, isbn: str):
+        self.isbn = isbn
+```
+
+### Error Propagation
+
+1. **Service Layer** - Raises typed exceptions
+2. **Home Assistant Services** - Catches and converts to ValueError
+3. **User** - Sees friendly error message
 
 ## Testing Strategy
 
-### Unit Tests
-- Test each class independently
-- Mock external dependencies (APIs, database)
-- Verify error handling
+### Unit Tests (tests/)
 
-### Integration Tests
-- Test service workflows end-to-end
-- Verify database persistence
-- Test webhook payload parsing
+- **test_models.py** - Data model validation
+- **test_database.py** - Database operations
+- **test_api.py** - API client mocking
+- **test_book_service.py** - Business logic (14 tests)
+- **test_webhook.py** - Webhook handlers (19 tests)
 
-### Manual Testing Checklist
-- Add book via service
-- Search with different query types
-- Delete book
-- Test webhook with scanner payloads
-- Verify location storage
-- Check database file creation
+### Test Coverage
 
-## Performance Optimization
+Current: **50+ tests** covering:
+- ✅ ISBN validation (10, 13, invalid)
+- ✅ Duplicate detection
+- ✅ Metadata fetching (success, failure)
+- ✅ Search operations (title, author, ISBN, room)
+- ✅ Location management
+- ✅ Webhook payload validation
+- ✅ Error handling
 
-### Database Queries
-- Use indexed columns in WHERE clauses
-- Limit result sets with pagination
-- Case-insensitive searches use COLLATE NOCASE
-- Full-text search for complex queries
+### Running Tests
 
-### API Calls
-- Retry failed requests (exponential backoff)
-- Cache API responses when appropriate
-- Parallel requests where possible
+```bash
+# All tests
+python -m pytest tests/
 
-### Memory
-- Stream database results
-- Avoid loading entire library into memory
-- Paginate large result sets
+# Specific test file
+python -m pytest tests/test_webhook.py -v
 
-## Security Considerations
-
-### Database
-- SQLite with file-level permissions
-- Foreign key constraints enabled
-- No SQL injection (parameterized queries)
-- Timeout protection (30 seconds)
-
-### API
-- HTTPS for external APIs
-- Timeout on all HTTP requests
-- Rate limiting awareness
-
-### Webhook
-- Webhook token required (Home Assistant built-in)
-- Input validation on all webhook data
-- Normalized input to prevent injection
-
-## Logging
-
-### Logger
-- All classes use consistent logger: `LOGGER_NAME` from const.py
-- Log levels: DEBUG, INFO, WARNING, ERROR
-
-### Debug Output
-```python
-import logging
-logger = logging.getLogger("library_catalog")
-logger.debug("Detailed debug info")
-logger.info("General information")
-logger.warning("Warning message")
-logger.error("Error with exception", exc_info=True)
+# With coverage
+python -m pytest tests/ --cov=custom_components/library_catalog
 ```
 
-## Version Management
+## Code Style
 
-### Schema Versioning
-- Current version: 1
-- Future migrations will increment
-- Version stored in `schema_version` table
+### Type Hints
+Required on all functions:
+```python
+async def async_get_book(self, isbn: str) -> Optional[BookEntity]:
+    """Every parameter and return value typed."""
+```
 
-### Feature Flags
-- Located in `const.py`
-- Easy to disable features for debugging
-- Prepared for future features
+### Docstrings
+Google style:
+```python
+def function(param: str) -> int:
+    """Short description.
+    
+    Longer description if needed.
+    
+    Args:
+        param: Parameter description
+        
+    Returns:
+        Return value description
+        
+    Raises:
+        ValueError: When raised
+    """
+```
 
-## Getting Started with Development
+### Logging
+Appropriate levels:
+```python
+_LOGGER.debug("Detailed information")
+_LOGGER.info("Normal operation")
+_LOGGER.warning("Recoverable issue")
+_LOGGER.error("Error occurred")
+```
 
-1. **Setup Environment**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/library_catalog.git
-   cd library_catalog/library_catalog
-   pip install -r requirements.txt
-   ```
+## Configuration Constants
 
-2. **Understand Architecture**
-   - Read const.py for all constants
-   - Review models.py for data structures
-   - Study database.py for persistence
+All constants in `const.py`:
+- Service names
+- API endpoints
+- Timeouts
+- Limits
+- Error messages
+- Feature flags
 
-3. **Make Changes**
-   - Follow code style guidelines
-   - Add type hints
-   - Add docstrings
-   - Keep async throughout
+Example:
+```python
+SERVICE_ADD_BOOK: Final = "add_book"
+OPEN_LIBRARY_TIMEOUT: Final = 10
+SEARCH_DEFAULT_LIMIT: Final = 50
+```
 
-4. **Test Thoroughly**
-   - Write tests for new functionality
-   - Run existing tests
-   - Test in Home Assistant environment
+## Home Assistant Integration
 
-5. **Document**
-   - Update README if needed
-   - Add docstrings
-   - Update this guide if architecture changes
+### Config Flow
+User-friendly setup:
+1. User adds integration
+2. Enters library name (optional)
+3. Integration creates entry
+4. Database initialized
+5. Services registered
+
+### Coordinator
+Manages data refresh:
+```python
+class LibraryCatalogCoordinator(DataUpdateCoordinator):
+    """Update coordinator for library statistics."""
+    
+    async def _async_update_data(self) -> dict:
+        """Fetch library stats every 30 minutes."""
+```
+
+### Services
+Six services available:
+1. `add_book` - Add via ISBN with API lookup
+2. `add_book_manual` - Add with manual metadata
+3. `search` - Search books
+4. `delete_book` - Remove book
+5. `update_location` - Change book location
+6. `reload_database` - Refresh coordinator
+
+### Events
+Integration fires events for automations:
+- `library_catalog_book_added`
+- `library_catalog_book_deleted`
+- `library_catalog_location_updated`
+- `library_catalog_barcode_scanned`
+- `library_catalog_database_reloaded`
+
+## Development Workflow
+
+### 1. Feature Development
+```bash
+# Create feature branch
+git checkout -b feature/new-feature
+
+# Make changes
+# Write tests
+# Run tests
+
+# Commit
+git commit -m "feat: Add new feature"
+git push origin feature/new-feature
+```
+
+### 2. Testing
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test
+pytest tests/test_webhook.py::TestWebhookHandler::test_valid_isbn -v
+
+# Check coverage
+pytest tests/ --cov=custom_components/library_catalog --cov-report=html
+```
+
+### 3. Documentation
+Update relevant docs:
+- README.md for user-facing changes
+- DEVELOPMENT.md for architecture changes
+- Docstrings for code changes
+- CHANGELOG.md for version history
+
+### 4. Commit Messages
+Follow conventional commits:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation only
+- `test:` - Test changes
+- `refactor:` - Code restructure
+- `chore:` - Maintenance
+
+## Deployment
+
+### HACS Installation
+Users install via HACS:
+1. HACS → Integrations → Explore & Download
+2. Search "Library Catalog"
+3. Download
+4. Restart Home Assistant
+5. Add integration via UI
+
+### Manual Installation
+Copy to custom_components:
+```
+config/
+└── custom_components/
+    └── library_catalog/
+        ├── __init__.py
+        ├── manifest.json
+        └── ...
+```
 
 ## Future Enhancements
 
-- Book loans tracking
-- Library statistics
-- Local cover cache
-- Import/export functionality
-- Mobile app integration
+### Planned Features
+- Local cover image caching
+- Book loan tracking
+- Reading statistics
+- Book recommendations
+- Series management
+- Import/Export
 - Multi-library sync
 
-See `const.py` for `FEATURE_*` flags.
+### Database Migration
+Version tracking in place:
+```python
+DB_SCHEMA_VERSION = 1  # Increment for migrations
+```
+
+Future migration handler will:
+1. Check current version
+2. Run necessary migrations
+3. Update version number
+
+## Performance Considerations
+
+### Database Optimization
+- Indexes on search fields
+- FTS5 for text search
+- LIMIT/OFFSET pagination
+- Connection pooling
+
+### API Rate Limiting
+- Respect provider limits
+- Fallback to secondary provider
+- Cache responses (future)
+
+### Memory Management
+- Stream large result sets
+- Pagination for UI display
+- Async operations prevent blocking
+
+## Contributing
+
+See CONTRIBUTING.md for:
+- Code of conduct
+- How to report issues
+- Pull request process
+- Development setup
+
+---
+
+## Quick Reference
+
+### Key Files
+- `const.py` - All constants (101 items)
+- `models.py` - Data structures
+- `database.py` - SQLite operations
+- `api.py` - External APIs
+- `book_service.py` - Business logic
+- `services.py` - HA services
+- `webhook.py` - Barcode endpoint
+
+### Key Commands
+```bash
+# Run tests
+pytest tests/
+
+# Check YAML
+ha core check
+
+# View logs
+ha core logs
+
+# Restart
+ha core restart
+```
+
+### Useful Links
+- [Home Assistant Dev Docs](https://developers.home-assistant.io/)
+- [Async Programming](https://docs.python.org/3/library/asyncio.html)
+- [Open Library API](https://openlibrary.org/developers/api)
+- [Google Books API](https://developers.google.com/books)
