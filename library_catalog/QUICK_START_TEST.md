@@ -96,21 +96,64 @@ You need your exact device name for notifications:
 
 ## Step 4: Add Automation (3 minutes)
 
-### 4.1 Open Automations File
+### 4.1 Add Automation
 
-Option A: **Via UI (Easier)**
+**Choose ONE method:**
+
+#### Option A: Via UI (Recommended - Easier)
+
 1. Go to **Settings** → **Automations & Scenes**
 2. Click **Create Automation** → **Create new automation**
 3. Click the **⋮** (three dots) top right
 4. Click **Edit in YAML**
+5. **Delete everything** in the editor
+6. Copy this code (**WITHOUT the leading dash `-`**):
 
-Option B: **Via File Editor**
+```yaml
+id: process_scanned_book_from_ios_test
+alias: "Process Scanned Book from iOS (Test)"
+description: "Test automation for book scanning"
+trigger:
+  - platform: webhook
+    webhook_id: ios_book_scanner
+    local_only: false
+condition:
+  - condition: state
+    entity_id: input_boolean.book_scanning_active
+    state: "on"
+action:
+  - variables:
+      scanned_isbn: "{{ trigger.json.isbn }}"
+  - service: library_catalog.add_book
+    data:
+      isbn: "{{ scanned_isbn }}"
+      location:
+        room: "{{ states('input_text.book_scan_room') }}"
+        shelf: "{{ states('input_text.book_scan_shelf') }}"
+        compartment: "{{ states('input_text.book_scan_compartment') }}"
+    continue_on_error: true
+  - service: input_number.increment
+    target:
+      entity_id: input_number.books_scanned_today
+  - service: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.last_book_scan_time
+    data:
+      timestamp: "{{ now().timestamp() }}"
+  - service: notify.mobile_app_YOUR_DEVICE
+    data:
+      title: "✅ Book Added"
+      message: "ISBN {{ scanned_isbn }} added to {{ states('input_text.book_scan_room') }}"
+mode: single
+```
+
+**⚠️ IMPORTANT:** Replace `notify.mobile_app_YOUR_DEVICE` with your device name from Step 3!
+
+#### Option B: Via automations.yaml File
+
 1. Open `automations.yaml` in File Editor
 2. Go to the end of the file
-
-### 4.2 Copy This Automation
-
-**Replace `mobile_app_iphone` with YOUR device name from Step 3!**
+3. Add this code (**WITH the leading dash `-`**):
 
 ```yaml
 - id: process_scanned_book_from_ios_test
@@ -125,11 +168,8 @@ Option B: **Via File Editor**
       entity_id: input_boolean.book_scanning_active
       state: "on"
   action:
-    # Extract ISBN
     - variables:
         scanned_isbn: "{{ trigger.json.isbn }}"
-    
-    # Add book to catalog
     - service: library_catalog.add_book
       data:
         isbn: "{{ scanned_isbn }}"
@@ -138,27 +178,40 @@ Option B: **Via File Editor**
           shelf: "{{ states('input_text.book_scan_shelf') }}"
           compartment: "{{ states('input_text.book_scan_compartment') }}"
       continue_on_error: true
-    
-    # Increment counter
     - service: input_number.increment
       target:
         entity_id: input_number.books_scanned_today
-    
-    # Update timestamp
     - service: input_datetime.set_datetime
       target:
         entity_id: input_datetime.last_book_scan_time
       data:
         timestamp: "{{ now().timestamp() }}"
-    
-    # Send notification (REPLACE device name!)
-    - service: notify.mobile_app_iphone
+    - service: notify.mobile_app_YOUR_DEVICE
       data:
         title: "✅ Book Added"
         message: "ISBN {{ scanned_isbn }} added to {{ states('input_text.book_scan_room') }}"
+  mode: single
 ```
 
-### 4.3 Save
+**⚠️ IMPORTANT:** Replace `notify.mobile_app_YOUR_DEVICE` with your device name from Step 3!
+
+### 4.2 Key Differences
+
+**UI Format:**
+- ❌ NO leading dash (`-`) before `id:`
+- ✅ Starts directly with `id:`
+
+**File Format:**
+- ✅ HAS leading dash (`- id:`)
+- Each automation in the list starts with `-`
+
+### 4.3 Common Error
+
+❌ **"Message malformed: not a valid option at '['0']"**
+- **Cause:** You used the file format (with `-`) in the UI
+- **Solution:** Use the UI format (without `-`) when creating via UI
+
+### 4.4 Save
 
 - If using UI: Click **Save**
 - If using File Editor: Save the file

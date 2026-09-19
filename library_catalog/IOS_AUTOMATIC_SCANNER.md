@@ -69,10 +69,62 @@ Restart Home Assistant after adding these.
 
 ### Step 2: Add Automation to Process Scanned Books
 
-Add to `automations.yaml`:
+**Choose ONE method:**
+
+#### Method A: Via UI (Recommended)
+
+1. Go to **Settings** → **Automations & Scenes**
+2. Click **Create Automation** → **Create new automation**
+3. Click **⋮** (three dots) → **Edit in YAML**
+4. Delete everything and paste this (**without leading dash**):
 
 ```yaml
-# This automation triggers when the webhook receives a scanned ISBN
+id: process_scanned_book_from_ios
+alias: "Process Scanned Book from iOS"
+description: "Automatically add scanned books to catalog"
+trigger:
+  - platform: webhook
+    webhook_id: ios_book_scanner
+    local_only: false
+condition:
+  - condition: state
+    entity_id: input_boolean.book_scanning_active
+    state: "on"
+action:
+  - variables:
+      scanned_isbn: "{{ trigger.json.isbn }}"
+  - service: library_catalog.add_book
+    data:
+      isbn: "{{ scanned_isbn }}"
+      location:
+        room: "{{ states('input_text.book_scan_room') }}"
+        shelf: "{{ states('input_text.book_scan_shelf') }}"
+        compartment: "{{ states('input_text.book_scan_compartment') }}"
+    continue_on_error: true
+  - service: input_number.increment
+    target:
+      entity_id: input_number.books_scanned_today
+  - service: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.last_book_scan_time
+    data:
+      timestamp: "{{ now().timestamp() }}"
+  - service: notify.mobile_app_YOUR_DEVICE
+    data:
+      title: "✅ Book Added"
+      message: "ISBN {{ scanned_isbn }} added to {{ states('input_text.book_scan_room') }}"
+      data:
+        push:
+          sound: "default"
+        group: "book-scanner"
+mode: single
+```
+
+#### Method B: Via automations.yaml File
+
+Add to `automations.yaml` (**with leading dash**):
+
+```yaml
 - id: process_scanned_book_from_ios
   alias: "Process Scanned Book from iOS"
   description: "Automatically add scanned books to catalog"
@@ -85,11 +137,8 @@ Add to `automations.yaml`:
       entity_id: input_boolean.book_scanning_active
       state: "on"
   action:
-    # Extract ISBN from webhook
     - variables:
         scanned_isbn: "{{ trigger.json.isbn }}"
-    
-    # Add book to catalog with current location
     - service: library_catalog.add_book
       data:
         isbn: "{{ scanned_isbn }}"
@@ -98,22 +147,15 @@ Add to `automations.yaml`:
           shelf: "{{ states('input_text.book_scan_shelf') }}"
           compartment: "{{ states('input_text.book_scan_compartment') }}"
       continue_on_error: true
-      response_variable: add_result
-    
-    # Increment counter
     - service: input_number.increment
       target:
         entity_id: input_number.books_scanned_today
-    
-    # Update timestamp
     - service: input_datetime.set_datetime
       target:
         entity_id: input_datetime.last_book_scan_time
       data:
         timestamp: "{{ now().timestamp() }}"
-    
-    # Send success notification to iPhone
-    - service: notify.mobile_app_iphone
+    - service: notify.mobile_app_YOUR_DEVICE
       data:
         title: "✅ Book Added"
         message: "ISBN {{ scanned_isbn }} added to {{ states('input_text.book_scan_room') }}"
@@ -121,6 +163,7 @@ Add to `automations.yaml`:
           push:
             sound: "default"
           group: "book-scanner"
+  mode: single
 
 # Auto-disable scanning after 1 hour of inactivity
 - id: auto_disable_book_scanning
@@ -135,7 +178,7 @@ Add to `automations.yaml`:
     - service: input_boolean.turn_off
       target:
         entity_id: input_boolean.book_scanning_active
-    - service: notify.mobile_app_iphone
+    - service: notify.mobile_app_YOUR_DEVICE
       data:
         title: "📚 Scanning Session Ended"
         message: "Auto-stopped after 1 hour. Added {{ states('input_number.books_scanned_today') | int }} books today."
@@ -154,7 +197,11 @@ Add to `automations.yaml`:
         value: 0
 ```
 
-**Important:** Replace `notify.mobile_app_iphone` with your actual device name from Settings → Devices & Services → Mobile App.
+**⚠️ IMPORTANT:** Replace `notify.mobile_app_YOUR_DEVICE` with your actual device name from Settings → Devices & Services → Mobile App.
+
+**Key Difference:**
+- **UI format:** No dash before `id:` 
+- **File format:** Has dash `- id:`
 
 ### Step 3: Create Scripts for Easy Control
 
@@ -169,7 +216,7 @@ start_book_scanning:
       target:
         entity_id: input_boolean.book_scanning_active
     
-    - service: notify.mobile_app_iphone
+    - service: notify.mobile_app_YOUR_DEVICE
       data:
         title: "📚 Scanner Ready"
         message: "Scanning to: {{ states('input_text.book_scan_room') }} > {{ states('input_text.book_scan_shelf') }}"
@@ -188,7 +235,7 @@ stop_book_scanning:
       target:
         entity_id: input_boolean.book_scanning_active
     
-    - service: notify.mobile_app_iphone
+    - service: notify.mobile_app_YOUR_DEVICE
       data:
         title: "✅ Scanning Complete"
         message: "Added {{ states('input_number.books_scanned_today') | int }} books today"
