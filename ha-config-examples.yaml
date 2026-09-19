@@ -1,0 +1,270 @@
+# Example Home Assistant Configuration Files
+# Copy these examples to your Home Assistant config directory
+
+#=============================================================================
+# File: scripts.yaml (or add to your existing scripts.yaml)
+#=============================================================================
+
+# Quick Add Book Script
+add_book_quick:
+  alias: "Library: Add Book"
+  description: "Add a book to your library catalog"
+  icon: mdi:book-plus
+  fields:
+    isbn:
+      description: "Book ISBN (10 or 13 digits)"
+      example: "9780451524935"
+      required: true
+      selector:
+        text:
+    room:
+      description: "Room where the book is located"
+      example: "Living Room"
+      default: "Living Room"
+      selector:
+        text:
+    shelf:
+      description: "Shelf name or number"
+      example: "Bookshelf 1"
+      default: "Main Shelf"
+      selector:
+        text:
+    compartment:
+      description: "Section or compartment on the shelf"
+      example: "Top"
+      default: "Middle"
+      selector:
+        select:
+          options:
+            - "Top"
+            - "Upper Middle"
+            - "Middle"
+            - "Lower Middle"
+            - "Bottom"
+  sequence:
+    - service: library_catalog.add_book
+      data:
+        isbn: "{{ isbn }}"
+        location:
+          room: "{{ room }}"
+          shelf: "{{ shelf }}"
+          compartment: "{{ compartment }}"
+    - service: notify.notify
+      data:
+        title: "📚 Book Added!"
+        message: "Added book with ISBN {{ isbn }} to {{ room }}"
+
+# Search by Title
+search_by_title:
+  alias: "Library: Search by Title"
+  description: "Search your library by book title"
+  icon: mdi:book-search
+  fields:
+    query:
+      description: "Title to search for"
+      example: "Harry Potter"
+      required: true
+      selector:
+        text:
+  sequence:
+    - service: library_catalog.search
+      data:
+        query: "{{ query }}"
+        search_by: "title"
+        limit: 50
+      response_variable: results
+    - service: persistent_notification.create
+      data:
+        title: "📚 Search: {{ query }}"
+        message: "Found {{ results.books | length }} book(s)"
+
+# Search by Author
+search_by_author:
+  alias: "Library: Search by Author"
+  description: "Search your library by author name"
+  icon: mdi:account-search
+  fields:
+    query:
+      description: "Author name to search for"
+      example: "George Orwell"
+      required: true
+      selector:
+        text:
+  sequence:
+    - service: library_catalog.search
+      data:
+        query: "{{ query }}"
+        search_by: "author"
+        limit: 50
+      response_variable: results
+    - service: persistent_notification.create
+      data:
+        title: "👤 Books by {{ query }}"
+        message: "Found {{ results.books | length }} book(s)"
+
+# Delete Book
+delete_book:
+  alias: "Library: Delete Book"
+  description: "Remove a book from your library"
+  icon: mdi:book-remove
+  fields:
+    isbn:
+      description: "ISBN of book to delete"
+      example: "9780451524935"
+      required: true
+      selector:
+        text:
+  sequence:
+    - service: library_catalog.delete_book
+      data:
+        isbn: "{{ isbn }}"
+    - service: notify.notify
+      data:
+        title: "🗑️ Book Deleted"
+        message: "Removed book with ISBN {{ isbn }}"
+
+#=============================================================================
+# File: automations.yaml (or add to your existing automations.yaml)
+#=============================================================================
+
+# Automation: Notify when book is added successfully
+- id: library_book_added_notification
+  alias: "Library: Book Added Notification"
+  description: "Send notification when a book is successfully added"
+  trigger:
+    - platform: event
+      event_type: call_service
+      event_data:
+        domain: library_catalog
+        service: add_book
+  action:
+    - service: persistent_notification.create
+      data:
+        title: "📚 Library Updated"
+        message: "New book added to your library catalog"
+        notification_id: "library_update"
+
+#=============================================================================
+# File: ui-lovelace.yaml (or add as new dashboard via UI)
+#=============================================================================
+# Go to Settings → Dashboards → Add Dashboard → Create from scratch
+# Then paste this YAML in raw configuration editor
+
+title: Library Catalog
+views:
+  - title: My Books
+    path: library
+    icon: mdi:bookshelf
+    badges: []
+    cards:
+      # Quick Add Section
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: |
+              # 📚 Library Catalog
+              Manage your book collection
+
+          - type: entities
+            title: Quick Add Books
+            show_header_toggle: false
+            entities:
+              - type: button
+                name: "Add: 1984 by George Orwell"
+                icon: mdi:book-plus
+                action_name: ADD
+                tap_action:
+                  action: call-service
+                  service: library_catalog.add_book
+                  service_data:
+                    isbn: "9780451524935"
+                    location:
+                      room: "Living Room"
+                      shelf: "Main Shelf"
+                      compartment: "Middle"
+
+              - type: button
+                name: "Add: Harry Potter #1"
+                icon: mdi:book-plus
+                action_name: ADD
+                tap_action:
+                  action: call-service
+                  service: library_catalog.add_book
+                  service_data:
+                    isbn: "9780747532699"
+                    location:
+                      room: "Bedroom"
+                      shelf: "Kids Books"
+                      compartment: "Top"
+
+              - type: button
+                name: "Add: The Hobbit"
+                icon: mdi:book-plus
+                action_name: ADD
+                tap_action:
+                  action: call-service
+                  service: library_catalog.add_book
+                  service_data:
+                    isbn: "9780547928227"
+                    location:
+                      room: "Living Room"
+                      shelf: "Main Shelf"
+                      compartment: "Bottom"
+
+      # Scripts Section
+      - type: entities
+        title: Library Actions
+        show_header_toggle: false
+        entities:
+          - entity: script.add_book_quick
+            name: Add Custom Book
+            icon: mdi:book-plus-multiple
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              service_data:
+                entity_id: script.add_book_quick
+
+          - entity: script.search_by_title
+            name: Search by Title
+            icon: mdi:book-search
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              service_data:
+                entity_id: script.search_by_title
+
+          - entity: script.search_by_author
+            name: Search by Author
+            icon: mdi:account-search
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              service_data:
+                entity_id: script.search_by_author
+
+      # Information Card
+      - type: markdown
+        title: How to Use
+        content: |
+          ## 🎯 Quick Start
+
+          ### Add a Book:
+          1. Click a "Quick Add" button above, **OR**
+          2. Use "Add Custom Book" and enter ISBN
+
+          ### Search:
+          - Click "Search by Title" or "Search by Author"
+          - Enter your search term
+          - Results appear in notifications
+
+          ### Webhook (for barcode scanners):
+          ```
+          http://YOUR_IP:8123/api/webhook/library_catalog_scanner
+          ```
+
+          ### Test ISBNs:
+          - `9780451524935` - 1984
+          - `9780747532699` - Harry Potter
+          - `9780547928227` - The Hobbit
+          - `9780141439518` - Pride & Prejudice
