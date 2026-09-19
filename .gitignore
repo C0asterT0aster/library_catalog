@@ -147,3 +147,7 @@ library_catalog.db
 
 # Logs
 *.log
+
+# Local development workflow scripts (not pushed to GitHub)
+test-and-push.sh
+test-and-push.py
