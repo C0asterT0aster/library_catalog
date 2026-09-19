@@ -50,7 +50,7 @@ class LibraryCatalogCoordinator(DataUpdateCoordinator):
         """
         try:
             # Get book count and other stats from database
-            book_count = await self.database.get_book_count()
+            book_count = await self.database.async_get_book_count()
 
             return {
                 "book_count": book_count,
