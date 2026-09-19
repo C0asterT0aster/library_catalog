@@ -2,6 +2,41 @@
 
 This document describes the architecture and development process for Library Catalog.
 
+## Development Guidelines
+
+### Documentation Standards
+
+**IMPORTANT: All documentation must be written in English.**
+
+✅ **Required:**
+- All `.md` files in English
+- Code comments in English
+- Commit messages in English
+- Variable names in English
+- Error messages in English
+
+❌ **Not Allowed:**
+- German or other languages in documentation
+- Mixed language documentation
+- Non-English commit messages
+
+**Rationale:** 
+- Open source projects use English as the universal language
+- Makes the project accessible to international contributors
+- Standard practice in the Home Assistant community
+
+### Before Committing
+
+Check that:
+- [ ] All documentation is in English
+- [ ] No sensitive information (see Security section below)
+- [ ] Code examples use placeholders (YOUR_DEVICE, YOUR_IP, etc.)
+- [ ] YAML syntax is correct for both UI and file formats
+- [ ] Tests pass
+- [ ] Changes are synced to library_catalog/ directory
+
+---
+
 ## Security & Privacy Guidelines
 
 ### Information to Keep Private
