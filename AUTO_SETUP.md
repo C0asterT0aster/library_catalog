@@ -4,7 +4,7 @@
 
 Instead of manually copying YAML files, you can now **automatically set up everything** with one service call!
 
-### Quick Setup (2 Minutes)
+### Quick Setup (5 Minutes)
 
 1. **Install the integration via HACS**
 2. **Go to Developer Tools → Services**
@@ -13,14 +13,18 @@ Instead of manually copying YAML files, you can now **automatically set up every
    service: library_catalog.auto_setup
    ```
 4. **Click "Call Service"**
-5. **Done!** ✅
+5. **Check the notification** - it will tell you what to do next
+6. **⚠️ RESTART HOME ASSISTANT** (Settings → System → Restart)
+7. **Wait 2 minutes for restart**
+8. **Add dashboard card** (see below)
+9. **Done!** ✅
 
 The service automatically creates:
-- ✅ All input helpers (room, shelf, compartment, counters)
-- ✅ Scripts (`start_book_adding`, `stop_book_adding`)
-- ✅ Automations (handle add book, handle stop)
+- ✅ All input helpers in `configuration.yaml` (room, shelf, compartment, counters)
+- ✅ Scripts in `scripts.yaml` (`start_book_adding`, `stop_book_adding`)
+- ✅ Automations in `automations.yaml` (handle add book, handle stop)
 
-You'll see a notification when it's complete!
+**IMPORTANT:** Input helpers require a Home Assistant restart to become active!
 
 ---
 

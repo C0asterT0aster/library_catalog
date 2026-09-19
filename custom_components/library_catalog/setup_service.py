@@ -1,16 +1,54 @@
-"""Automatic setup service for Library Catalog."""
+"""Automatic setup service for Library Catalog - writes YAML files directly."""
 import logging
 from typing import Any
 import yaml
 from pathlib import Path
 
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
 import voluptuous as vol
 
-from .helper_creator import create_input_helpers
-
 _LOGGER = logging.getLogger(__name__)
+
+
+# Configuration YAML that will be written
+INPUT_HELPERS_YAML = """
+# Library Catalog Input Helpers - Auto-generated
+input_text:
+  book_scan_room:
+    name: "Book Location - Room"
+    initial: "Living Room"
+    icon: mdi:home
+
+  book_scan_shelf:
+    name: "Book Location - Shelf"
+    initial: "Shelf 1"
+    icon: mdi:bookshelf
+
+  book_scan_compartment:
+    name: "Book Location - Compartment"
+    initial: "Top"
+    icon: mdi:book-open-variant
+
+input_boolean:
+  book_scanning_active:
+    name: "Book Adding Active"
+    initial: false
+    icon: mdi:book-plus
+
+input_number:
+  books_scanned_today:
+    name: "Books Added Today"
+    min: 0
+    max: 1000
+    step: 1
+    icon: mdi:counter
+
+input_datetime:
+  last_book_scan_time:
+    name: "Last Book Added Time"
+    has_date: true
+    has_time: true
+"""
 
 # Scripts that will be created
 SCRIPTS = {
@@ -171,23 +209,36 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
         _LOGGER.info("Starting automatic Library Catalog setup")
 
         results = {
-            "helpers_created": [],
-            "helpers_exist": [],
-            "scripts_created": [],
-            "automations_created": [],
+            "config_written": False,
+            "scripts_created": 0,
+            "automations_created": 0,
             "errors": []
         }
 
-        # Step 1: Create input helpers
-        _LOGGER.info("Creating input helpers...")
-        helper_results = await create_input_helpers(hass)
-        results["helpers_created"] = helper_results.get("created", [])
-        results["helpers_exist"] = helper_results.get("already_exists", [])
-        results["errors"].extend(helper_results.get("errors", []))
-
-        # Step 2: Create scripts by writing to scripts.yaml
-        _LOGGER.info("Creating scripts...")
         try:
+            # Step 1: Write input helpers to configuration.yaml
+            _LOGGER.info("Writing input helpers to configuration.yaml...")
+            config_path = Path(hass.config.path("configuration.yaml"))
+
+            if not config_path.exists():
+                results["errors"].append("configuration.yaml not found")
+            else:
+                # Read existing configuration
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config_content = f.read()
+
+                # Check if Library Catalog section already exists
+                if "# Library Catalog Input Helpers" in config_content:
+                    _LOGGER.info("Input helpers already exist, skipping...")
+                else:
+                    # Append to end of file
+                    with open(config_path, "a", encoding="utf-8") as f:
+                        f.write("\n\n" + INPUT_HELPERS_YAML)
+                    results["config_written"] = True
+                    _LOGGER.info("Input helpers written to configuration.yaml")
+
+            # Step 2: Create scripts
+            _LOGGER.info("Creating scripts...")
             scripts_path = Path(hass.config.path("scripts.yaml"))
 
             # Read existing scripts if file exists
@@ -199,17 +250,23 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
                 except Exception as err:
                     _LOGGER.warning("Could not read existing scripts.yaml: %s", err)
 
+            # Remove old library catalog scripts
+            existing_scripts = {
+                k: v for k, v in existing_scripts.items()
+                if k not in ["start_book_scanning", "stop_book_scanning", "start_book_adding", "stop_book_adding"]
+            }
+
             # Add our scripts
             existing_scripts.update(SCRIPTS)
 
             # Write back to file
             with open(scripts_path, "w", encoding="utf-8") as f:
-                yaml.dump(existing_scripts, f, default_flow_style=False, allow_unicode=True)
+                yaml.dump(existing_scripts, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
             # Reload scripts
             await hass.services.async_call("script", "reload", blocking=True)
 
-            results["scripts_created"] = list(SCRIPTS.keys())
+            results["scripts_created"] = len(SCRIPTS)
             _LOGGER.info("Created %d scripts", len(SCRIPTS))
 
         except Exception as err:
@@ -217,9 +274,9 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
             results["errors"].append(error_msg)
             _LOGGER.error(error_msg)
 
-        # Step 3: Create automations by writing to automations.yaml
-        _LOGGER.info("Creating automations...")
         try:
+            # Step 3: Create automations
+            _LOGGER.info("Creating automations...")
             automations_path = Path(hass.config.path("automations.yaml"))
 
             # Read existing automations if file exists
@@ -228,6 +285,8 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
                 try:
                     with open(automations_path, "r", encoding="utf-8") as f:
                         existing_automations = yaml.safe_load(f) or []
+                        if not isinstance(existing_automations, list):
+                            existing_automations = []
                 except Exception as err:
                     _LOGGER.warning("Could not read existing automations.yaml: %s", err)
 
@@ -242,12 +301,12 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
 
             # Write back to file
             with open(automations_path, "w", encoding="utf-8") as f:
-                yaml.dump(existing_automations, f, default_flow_style=False, allow_unicode=True)
+                yaml.dump(existing_automations, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
             # Reload automations
             await hass.services.async_call("automation", "reload", blocking=True)
 
-            results["automations_created"] = [a["id"] for a in AUTOMATIONS]
+            results["automations_created"] = len(AUTOMATIONS)
             _LOGGER.info("Created %d automations", len(AUTOMATIONS))
 
         except Exception as err:
@@ -257,23 +316,33 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
 
         # Step 4: Send notification with results
         message = "✅ **Setup Complete!**\n\n"
-        message += f"**Input Helpers:**\n"
-        message += f"✅ Created: {len(results['helpers_created'])}\n"
-        if results['helpers_exist']:
-            message += f"ℹ️ Already existed: {len(results['helpers_exist'])}\n"
-        message += f"\n**Scripts:** {len(results['scripts_created'])} created\n"
-        message += f"**Automations:** {len(results['automations_created'])} created\n"
+
+        if results["config_written"]:
+            message += "📝 **Input helpers written to configuration.yaml**\n"
+            message += "⚠️ **YOU MUST RESTART HOME ASSISTANT NOW!**\n\n"
+        else:
+            message += "ℹ️ Input helpers already exist\n\n"
+
+        message += f"**Scripts:** {results['scripts_created']} created\n"
+        message += f"**Automations:** {results['automations_created']} created\n"
 
         if results["errors"]:
             message += f"\n⚠️ **Errors:** {len(results['errors'])}\n"
-            for error in results["errors"][:3]:  # Show first 3 errors
+            for error in results["errors"][:3]:
                 message += f"- {error}\n"
 
-        message += "\n**Next Steps:**\n"
-        message += "1. Go to Overview (dashboard)\n"
-        message += "2. Add card (see SETUP_GUIDE.md for YAML)\n"
-        message += "3. Click 'Start Adding Books'\n"
-        message += "4. Enter ISBN in notification!\n"
+        if results["config_written"]:
+            message += "\n**IMPORTANT:**\n"
+            message += "1. ⚠️ **RESTART HOME ASSISTANT** (Settings → System → Restart)\n"
+            message += "2. Wait for restart (2 minutes)\n"
+            message += "3. Add dashboard card (see AUTO_SETUP.md)\n"
+            message += "4. Click 'Start Adding Books'!\n"
+        else:
+            message += "\n**Next Steps:**\n"
+            message += "1. Go to Overview (dashboard)\n"
+            message += "2. Add card (see AUTO_SETUP.md for YAML)\n"
+            message += "3. Click 'Start Adding Books'\n"
+            message += "4. Enter ISBN in notification!\n"
 
         await hass.services.async_call(
             "persistent_notification",
@@ -296,11 +365,3 @@ async def async_setup_automation_service(hass: HomeAssistant) -> None:
     )
 
     _LOGGER.info("Auto-setup service registered")
-
-
-async def async_get_setup_yaml() -> dict[str, Any]:
-    """Return the YAML configuration for manual setup."""
-    return {
-        "scripts": SCRIPTS,
-        "automations": AUTOMATIONS
-    }
