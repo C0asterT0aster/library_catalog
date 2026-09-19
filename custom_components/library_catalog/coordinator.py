@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
@@ -31,7 +33,7 @@ class LibraryCatalogCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name="Library Catalog",
-            update_interval=UPDATE_INTERVAL,
+            update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
 
     async def _async_update_data(self) -> Any:
