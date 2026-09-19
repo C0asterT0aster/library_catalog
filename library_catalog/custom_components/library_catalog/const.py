@@ -28,6 +28,8 @@ SERVICE_ADD_BOOK: Final = "add_book"
 SERVICE_ADD_BOOK_MANUAL: Final = "add_book_manual"
 SERVICE_SEARCH: Final = "search"
 SERVICE_DELETE_BOOK: Final = "delete_book"
+SERVICE_UPDATE_LOCATION: Final = "update_location"
+SERVICE_RELOAD_DATABASE: Final = "reload_database"
 
 # ============================================================================
 # SERVICE PARAMETERS / CONFIGURATION KEYS

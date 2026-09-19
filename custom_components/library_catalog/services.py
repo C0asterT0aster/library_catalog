@@ -17,6 +17,8 @@ from .const import (
     SERVICE_ADD_BOOK_MANUAL,
     SERVICE_SEARCH,
     SERVICE_DELETE_BOOK,
+    SERVICE_UPDATE_LOCATION,
+    SERVICE_RELOAD_DATABASE,
     CONF_ISBN,
     CONF_LOCATION,
     CONF_ROOM,
@@ -77,6 +79,13 @@ ADD_BOOK_MANUAL_SCHEMA = vol.Schema({
     vol.Optional(CONF_PAGES): cv.positive_int,
 })
 
+UPDATE_LOCATION_SCHEMA = vol.Schema({
+    vol.Required(CONF_ISBN): cv.string,
+    vol.Required(CONF_LOCATION): LOCATION_SCHEMA,
+})
+
+RELOAD_DATABASE_SCHEMA = vol.Schema({})
+
 
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for the Library Catalog integration."""
@@ -122,6 +131,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     },
                 }
             )
+
+            _LOGGER.info("Book added successfully: %s - %s", book_entity.title, book_entity.isbn)
 
         except DuplicateISBNError as err:
             _LOGGER.warning("Duplicate ISBN: %s", err.message)
@@ -188,6 +199,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     },
                 }
             )
+
+            _LOGGER.info("Manual book added successfully: %s - %s", book_entity.title, book_entity.isbn)
 
         except DuplicateISBNError as err:
             _LOGGER.warning("Duplicate ISBN: %s", err.message)
@@ -276,7 +289,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # Delegate to service layer
             deleted_book = await book_service.delete_book(isbn)
 
-            _LOGGER.info("Book deleted: %s", isbn)
+            _LOGGER.info("Book deleted: %s - %s", deleted_book.title, isbn)
 
             # Fire Home Assistant event for automations
             hass.bus.async_fire(
@@ -292,6 +305,88 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(err.message) from err
         except Exception as err:
             _LOGGER.error("Failed to delete book: %s", err)
+            raise
+
+    async def update_location_service(call: ServiceCall) -> None:
+        """Handle updating a book's physical location.
+
+        This is a thin wrapper that:
+        1. Extracts parameters from service call
+        2. Delegates to book_service.update_location()
+        3. Fires Home Assistant event on success
+        """
+        isbn = call.data[CONF_ISBN]
+        location_data = call.data[CONF_LOCATION]
+
+        try:
+            # Get book service
+            book_service = _get_book_service(hass)
+            if not book_service:
+                raise ValueError("Library Catalog not available")
+
+            # Create location
+            location = BookLocation(
+                room=location_data[CONF_ROOM],
+                shelf=location_data[CONF_SHELF],
+                compartment=location_data[CONF_COMPARTMENT],
+            )
+
+            # Delegate to service layer
+            updated_book = await book_service.update_location(isbn, location)
+
+            _LOGGER.info(
+                "Location updated for %s: %s/%s/%s",
+                isbn,
+                location.room,
+                location.shelf,
+                location.compartment,
+            )
+
+            # Fire Home Assistant event for automations
+            hass.bus.async_fire(
+                f"{DOMAIN}_location_updated",
+                {
+                    "isbn": updated_book.isbn,
+                    "title": updated_book.title,
+                    "location": {
+                        "room": location.room,
+                        "shelf": location.shelf,
+                        "compartment": location.compartment,
+                    },
+                }
+            )
+
+        except BookNotFoundError as err:
+            _LOGGER.warning("Book not found: %s", err.message)
+            raise ValueError(err.message) from err
+        except Exception as err:
+            _LOGGER.error("Failed to update location: %s", err)
+            raise
+
+    async def reload_database_service(call: ServiceCall) -> None:
+        """Handle reloading/refreshing the database coordinator.
+
+        Forces a refresh of library statistics and state.
+        """
+        try:
+            # Get all coordinators and refresh them
+            refreshed_count = 0
+            for entry_data in hass.data[DOMAIN].values():
+                if isinstance(entry_data, dict) and "coordinator" in entry_data:
+                    coordinator = entry_data["coordinator"]
+                    await coordinator.async_request_refresh()
+                    refreshed_count += 1
+
+            _LOGGER.info("Database reloaded: %d coordinator(s) refreshed", refreshed_count)
+
+            # Fire Home Assistant event
+            hass.bus.async_fire(
+                f"{DOMAIN}_database_reloaded",
+                {"coordinators_refreshed": refreshed_count}
+            )
+
+        except Exception as err:
+            _LOGGER.error("Failed to reload database: %s", err)
             raise
 
     # Register services
@@ -324,6 +419,20 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         schema=DELETE_BOOK_SCHEMA,
     )
 
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_UPDATE_LOCATION,
+        update_location_service,
+        schema=UPDATE_LOCATION_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RELOAD_DATABASE,
+        reload_database_service,
+        schema=RELOAD_DATABASE_SCHEMA,
+    )
+
     _LOGGER.info("Library Catalog services registered")
 
 
@@ -333,6 +442,8 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     hass.services.async_remove(DOMAIN, SERVICE_ADD_BOOK_MANUAL)
     hass.services.async_remove(DOMAIN, SERVICE_SEARCH)
     hass.services.async_remove(DOMAIN, SERVICE_DELETE_BOOK)
+    hass.services.async_remove(DOMAIN, SERVICE_UPDATE_LOCATION)
+    hass.services.async_remove(DOMAIN, SERVICE_RELOAD_DATABASE)
     _LOGGER.info("Library Catalog services unregistered")
 
 

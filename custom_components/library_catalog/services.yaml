@@ -161,3 +161,30 @@ delete_book:
       example: "9780451524935"
       selector:
         text:
+
+update_location:
+  name: Update Book Location
+  description: Update the physical location of a book in your library
+  fields:
+    isbn:
+      name: ISBN
+      description: The ISBN of the book to update
+      required: true
+      example: "9780451524935"
+      selector:
+        text:
+    location:
+      name: New Location
+      description: New physical location of the book
+      required: true
+      selector:
+        object:
+      example: |
+        room: "Bedroom"
+        shelf: "Shelf 2"
+        compartment: "Middle"
+
+reload_database:
+  name: Reload Database
+  description: Force a refresh of library statistics and state from the database
+  fields: {}
