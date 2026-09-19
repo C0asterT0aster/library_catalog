@@ -421,9 +421,30 @@ CREATE VIRTUAL TABLE books_fts USING fts5(
 ## 11. Quick Reference: Testing the Integration
 
 ### Installation
+
+**Via HACS (Recommended):**
+1. Add this repository as a custom repository in HACS
+2. Search for "Library Catalog" in HACS → Integrations
+3. Click Install
+4. Restart Home Assistant
+5. Add integration via UI: Settings → Devices & Services → Add Integration → "Library Catalog"
+
+**Manual Installation:**
 1. Copy `custom_components/library_catalog/` to your Home Assistant `config/custom_components/`
 2. Restart Home Assistant
 3. Add integration via UI: Settings → Devices & Services → Add Integration → "Library Catalog"
+
+### Updating the Integration
+
+**Via HACS:**
+1. Go to HACS → Integrations → Library Catalog
+2. Click "Redownload" or wait for update notification
+3. Go to Settings → Devices & Services
+4. Remove the "Library Catalog" integration
+5. Restart Home Assistant
+6. Re-add the integration: Settings → Devices & Services → Add Integration → "Library Catalog"
+
+**Note:** Removing and re-adding the integration is necessary to reload all code changes. The database file (`library_catalog.db`) persists, so your books are not deleted.
 
 ### Test ISBNs (Verified Working)
 ```
